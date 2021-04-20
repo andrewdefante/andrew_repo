@@ -1,0 +1,131 @@
+---
+title: "Formula 1 - 2021 Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(flexdashboard)
+library(lubridate)
+library(dplyr)
+library(plotly)
+library(shiny)
+library(shinyWidgets)
+library(shinyjs)
+library(rsconnect)
+library(DT)
+library(data.table)
+
+gp <- read.csv('2021_gp.csv')
+
+gp$Compound <- as.factor(gp$Compound)
+#convert time columns to apt class 
+gp$LapTime <- as.POSIXct(gp$LapTime, format="%H:%M:%OS",tz="UTC"); difftime(gp$LapTime,trunc(gp$LapTime,"day"),units="secs")
+gp$Sector1Time <- as.POSIXct(gp$Sector1Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector1Time,trunc(gp$Sector1Time,"day"),units="secs")
+gp$Sector2Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector2Time,trunc(gp$Sector2Time,"day"),units="secs")
+gp$Sector3Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector3Time,trunc(gp$Sector3Time,"day"),units="secs")
+
+```
+
+Sidebar {.sidebar data-width=350}
+---------------------------------------------------
+
+```{r sidebar.main, echo = FALSE}
+
+# pick GP
+pickerInput(inputId = "gp_id",
+                      label = "Grand Prix",
+                      choices = levels(as.factor(gp$gp)),
+                      selected = levels(as.factor(gp$gp)),
+                      multiple = FALSE,
+                      options = pickerOptions(actionsBox = TRUE))
+
+# pick constructor
+pickerInput(inputId = "constructor",
+                      label = "Constructor",
+                      choices = levels(as.factor(gp$Team)),
+                      selected = levels(as.factor(gp$Team)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE))
+
+# Constructor Reactive Dataframe
+#con.reactive <- reactive({
+#  gp %>%
+#    filter(Team %in% input$constructor) %>%
+#    filter(gp %in% input$gp_id) })
+
+# pick driver
+pickerInput(inputId = "driver",
+                      label = "Driver",
+                      choices = levels(as.factor(gp$Driver)),
+                      selected = levels(as.factor(gp$Driver)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE))
+
+# Use the renderUI function to display reactive results based on above selections
+sliderInput(inputId = "lap",
+            label = h4("Lap"),
+            min = min(gp$LapNumber),
+            max = max(gp$LapNumber),
+           value = c(min(gp$LapNumber), 
+                      max(gp$LapNumber)))
+
+# Constructor Reactive Dataframe
+con.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp_id) %>%
+    filter(Team %in% input$constructor) %>%
+    filter(Driver %in% input$driver) %>%
+    filter(LapNumber >= input$lap[1] & LapNumber <= input$lap[2])
+  }) 
+
+##tires.test <- 
+##  laptimes_2020 %>%
+##    group_by(constructor) %>%
+##    filter(code %in% 'ALB') %>%
+##    filter(constructor %in% 'RB') %>%
+##    filter(traction %in% '3') %>%
+##    filter(braking %in% '4') %>% 
+##    mutate(  
+##      fastest_lap = min(ms),
+##      avg_lap = mean(ms),
+##      fl_delta = ((ms - fastest_lap)*0.001),
+##      avg_delta = (avg_lap - ms)
+##     ) %>%
+##     as.data.frame()
+
+```
+
+
+Row {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r laptime1, include=FALSE}
+renderPlotly({
+av <- plot_ly(con.reactive(), y = ~LapTime, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
+av <- av %>% layout(title = 'Lap Times')
+av
+})
+```
+
+
+### Table
+```{r tires_tbl, echo=FALSE}
+DT::renderDataTable({
+  datatable(con.reactive(),
+             extensions = 'Buttons',
+            options = list(bPaginate=FALSE, scrollY="1000px", 
+                           dom = 'Blfrtip',
+                           buttons = c('excel', 'pdf'),
+                           lengthMenu = list(c(10,25,50,-1),
+                                             c(10,25,50,"All"))))
+  
+})
+```
+
