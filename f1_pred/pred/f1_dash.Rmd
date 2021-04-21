@@ -2,10 +2,19 @@
 title: "Formula 1 - 2021 Dashboard"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns
+    orientation: rows
     vertical_layout: fill
     runtime: shiny
 ---
+<style>                     
+.navbar {
+  background-color:black;
+  border-color:red;
+}
+.navbar-brand {
+color:red!important;
+}
+</style> 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -22,22 +31,28 @@ library(data.table)
 
 gp <- read.csv('2021_gp.csv')
 
-gp$Compound <- as.factor(gp$Compound)
 #convert time columns to apt class 
-gp$LapTime <- as.POSIXct(gp$LapTime, format="%H:%M:%OS",tz="UTC"); difftime(gp$LapTime,trunc(gp$LapTime,"day"),units="secs")
+#gp$LapTime <- as.POSIXct(gp$LapTime, format="%H:%M:%OS",tz="UTC"); difftime(gp$LapTime,trunc(gp$LapTime,"day"),units="secs")
+gp$LapTime <- as.numeric(strptime(gp$LapTime, format="%H:%M:%OS") - as.POSIXct(format(Sys.Date())), units="secs")
+#gp$LapTime <- as.numeric(hmos(gp$LapTime) - hmos("00:00:00.000"))
 gp$Sector1Time <- as.POSIXct(gp$Sector1Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector1Time,trunc(gp$Sector1Time,"day"),units="secs")
+gp$Sector1Time <- as.numeric(gp$Sector2Time)
 gp$Sector2Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector2Time,trunc(gp$Sector2Time,"day"),units="secs")
+gp$Sector3Time <- as.numeric(gp$Sector3Time)
 gp$Sector3Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector3Time,trunc(gp$Sector3Time,"day"),units="secs")
 
 ```
 
+Data by Stint
+==================================================
+
 Sidebar {.sidebar data-width=350}
 ---------------------------------------------------
 
-```{r sidebar.main, echo = FALSE}
+```{r sidebar.session, echo = FALSE}
 
 # pick GP
-pickerInput(inputId = "gp_id",
+pickerInput(inputId = "gp2",
                       label = "Grand Prix",
                       choices = levels(as.factor(gp$gp)),
                       selected = levels(as.factor(gp$gp)),
@@ -45,7 +60,7 @@ pickerInput(inputId = "gp_id",
                       options = pickerOptions(actionsBox = TRUE))
 
 # pick constructor
-pickerInput(inputId = "constructor",
+pickerInput(inputId = "team2",
                       label = "Constructor",
                       choices = levels(as.factor(gp$Team)),
                       selected = levels(as.factor(gp$Team)),
@@ -53,33 +68,353 @@ pickerInput(inputId = "constructor",
                       options = pickerOptions(actionsBox = TRUE))
 
 # Constructor Reactive Dataframe
-#con.reactive <- reactive({
-#  gp %>%
-#    filter(Team %in% input$constructor) %>%
-#    filter(gp %in% input$gp_id) })
+con2.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2)
+})
 
 # pick driver
-pickerInput(inputId = "driver",
+renderUI ({pickerInput(inputId = "driver2",
                       label = "Driver",
-                      choices = levels(as.factor(gp$Driver)),
-                      selected = levels(as.factor(gp$Driver)),
+                      choices = levels(as.factor(con2.reactive()$Driver)),
+                      selected = levels(as.factor(con2.reactive()$Driver)),
                       multiple = TRUE,
-                      options = pickerOptions(actionsBox = TRUE))
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+d2.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2)
+})
+
+# pick session
+renderUI ({pickerInput(inputId = "session2",
+                      label = "Session",
+                      choices = levels(as.factor(d2.reactive()$session)),
+                      selected = levels(as.factor(d2.reactive()$session)),
+                      multiple = FALSE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+s2.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2)
+})
+
+# pick stint
+renderUI ({pickerInput(inputId = "stint",
+                      label = "Stint",
+                      choices = levels(as.factor(s2.reactive()$Stint)),
+                      selected = levels(as.factor(s2.reactive()$Stint)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# stint Reactive Dataframe
+st.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Stint %in% input$stint)
+})
+
+# pick tyre
+renderUI ({pickerInput(inputId = "compound2",
+                      label = "Tyre Compound",
+                      choices = levels(as.factor(st.reactive()$Tyre)),
+                      selected = levels(as.factor(st.reactive()$Tyre)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+t2.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Stint %in% input$stint) %>%
+    filter(Tyre %in% input$compound2)
+})
+
+# isolate track clear laps
+renderUI ({pickerInput(inputId = "clr",
+                      label = "Track Clear?",
+                      choices = levels(as.factor(st.reactive()$track_clear)),
+                      selected = levels(as.factor(st.reactive()$track_clear)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+clr.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Stint %in% input$stint) %>%
+    filter(Tyre %in% input$compound2) %>%
+    filter(track_clear %in% input$clr)
+})
 
 # Use the renderUI function to display reactive results based on above selections
-sliderInput(inputId = "lap",
-            label = h4("Lap"),
-            min = min(gp$LapNumber),
-            max = max(gp$LapNumber),
-           value = c(min(gp$LapNumber), 
-                      max(gp$LapNumber)))
+renderUI ({sliderInput(inputId = "tl",
+            label = h4("Lap (of Race)"),
+            min = min(clr.reactive()$LapNumber),
+            max = max(clr.reactive()$LapNumber),
+           value = c(min(clr.reactive()$LapNumber), 
+                      max(clr.reactive()$LapNumber)))
+           #,step = 1)
+})
+# Constructor Reactive Dataframe
+mn2.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Stint %in% input$stint) %>%
+    filter(Tyre %in% input$compound2) %>%
+    filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
+  }) 
+
+# Session FL 
+ssfl.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(session %in% input$session2) %>%
+    filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
+  }) 
+
+# Session FL - Tyre Dataframe
+ssflc.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Tyre %in% input$compound2) %>%
+    filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
+  }) 
+
+# Tire life
+tl.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
+  }) 
+
+##tires.test <- 
+##  laptimes_2020 %>%
+##    group_by(constructor) %>%
+##    filter(code %in% 'ALB') %>%
+##    filter(constructor %in% 'RB') %>%
+##    filter(traction %in% '3') %>%
+##    filter(braking %in% '4') %>% 
+##    mutate(  
+##      fastest_lap = min(ms),
+##      avg_lap = mean(ms),
+##      fl_delta = ((ms - fastest_lap)*0.001),
+##      avg_delta = (avg_lap - ms)
+##     ) %>%
+##     as.data.frame()
+
+```
+
+Metrics 
+---------------------------------------------------
+
+### Fastest Lap - Session {.value-box}
+  
+```{r notes.fastest_lap_session, echo=FALSE}
+# Total number of patients
+
+renderValueBox({
+  #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
+  valueBox(
+    value = min(ssfl.reactive()$LapTime, na.rm = TRUE),
+    caption = "Fastest Lap - Session")
+})
+
+
+```
+
+### Fastest Lap - Session {.value-box}
+  
+```{r fastest_lap_c, echo=FALSE}
+# Total number of patients
+
+renderValueBox({
+  #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
+  valueBox(
+    value = min(ssflc.reactive()$LapTime, na.rm = TRUE),
+    caption = "Fastest Lap - Tyre")
+})
+
+
+```
+
+### Fastest Lap - Driver {.value-box}
+  
+```{r fl_d, echo=FALSE}
+# Total number of patients
+
+renderValueBox({
+  #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
+  valueBox(
+    value = min(tl.reactive()$LapTime, na.rm = TRUE),
+    caption = "Fastest Lap - Driver")
+})
+
+
+```
+
+Row {.tabset}
+-----------------------------------------------------------------------
+
+### Lap Chart (by Stint)
+
+```{r laptime2, echo=FALSE}
+renderPlotly({
+av <- plot_ly(mn2.reactive(), y = ~LapTime, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
+av <- av %>% layout(title = 'Lap Times')
+av
+})
+```
+
+### Stint Pace
+
+```{r pace_ovr2, echo=FALSE}
+renderPlotly({
+hyg <- plot_ly(mn2.reactive(), y = ~LapTime, x =~Driver, color=~Tyre, type = "box")
+hyg <- hyg %>% layout(title = 'Overall Pace', boxmode = "group")
+hyg
+})
+```
+
+### Stint Table
+```{r tires_tbl2, echo=FALSE}
+DT::renderDataTable({
+  datatable(mn2.reactive(),
+             extensions = 'Buttons',
+            options = list(bPaginate=FALSE, scrollY="1000px", 
+                           dom = 'Blfrtip',
+                           buttons = c('excel', 'pdf'),
+                           lengthMenu = list(c(10,25,50,-1),
+                                             c(10,25,50,"All"))))
+  
+})
+```
+
+
+
+Data by Session
+==================================================
+
+Sidebar {.sidebar data-width=350}
+---------------------------------------------------
+
+```{r sidebar.main, echo = FALSE}
+
+# pick GP
+pickerInput(inputId = "gp",
+                      label = "Grand Prix",
+                      choices = levels(as.factor(gp$gp)),
+                      selected = levels(as.factor(gp$gp)),
+                      multiple = FALSE,
+                      options = pickerOptions(actionsBox = TRUE))
+
+# pick constructor
+pickerInput(inputId = "team",
+                      label = "Constructor",
+                      choices = levels(as.factor(gp$Team)),
+                      selected = levels(as.factor(gp$Team)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE))
 
 # Constructor Reactive Dataframe
 con.reactive <- reactive({
   gp %>%
-    filter(gp %in% input$gp_id) %>%
-    filter(Team %in% input$constructor) %>%
+    filter(gp %in% input$gp) %>%
+    filter(Team %in% input$team)
+})
+
+# pick driver
+renderUI ({pickerInput(inputId = "driver",
+                      label = "Driver",
+                      choices = levels(as.factor(con.reactive()$Driver)),
+                      selected = levels(as.factor(con.reactive()$Driver)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+d.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp) %>%
+    filter(Team %in% input$team) %>%
+    filter(Driver %in% input$driver)
+})
+
+# pick session
+renderUI ({pickerInput(inputId = "session",
+                      label = "Session",
+                      choices = levels(as.factor(d.reactive()$session)),
+                      selected = levels(as.factor(d.reactive()$session)),
+                      multiple = FALSE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+s.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp) %>%
+    filter(Team %in% input$team) %>%
     filter(Driver %in% input$driver) %>%
+    filter(session %in% input$session)
+})
+
+# pick tyre
+renderUI ({pickerInput(inputId = "Tyre",
+                      label = "Tyre Tyre",
+                      choices = levels(as.factor(s.reactive()$Tyre)),
+                      selected = levels(as.factor(s.reactive()$Tyre)),
+                      multiple = TRUE,
+                      options = pickerOptions(actionsBox = TRUE)) })
+
+# Constructor Reactive Dataframe
+t.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp) %>%
+    filter(Team %in% input$team) %>%
+    filter(Driver %in% input$driver) %>%
+    filter(session %in% input$session) %>%
+    filter(Tyre %in% input$Tyre)
+})
+
+# Use the renderUI function to display reactive results based on above selections
+renderUI ({sliderInput(inputId = "lap",
+            label = h4("Lap"),
+            min = min(t.reactive()$LapNumber),
+            max = max(t.reactive()$LapNumber),
+           value = c(min(t.reactive()$LapNumber), 
+                      max(t.reactive()$LapNumber)))
+           #,step = 1)
+})
+# Constructor Reactive Dataframe
+mn.reactive <- reactive({
+  gp %>%
+    filter(gp %in% input$gp) %>%
+    filter(Team %in% input$team) %>%
+    filter(Driver %in% input$driver) %>%
+    filter(session %in% input$session) %>%
+    filter(Tyre %in% input$Tyre) %>%
     filter(LapNumber >= input$lap[1] & LapNumber <= input$lap[2])
   }) 
 
@@ -101,24 +436,33 @@ con.reactive <- reactive({
 ```
 
 
-Row {data-width=350}
+Row {.tabset}
 -----------------------------------------------------------------------
 
-### Chart B
+### Lap Chart (by Session Lap)
 
-```{r laptime1, include=FALSE}
+```{r laptime1, echo=FALSE}
 renderPlotly({
-av <- plot_ly(con.reactive(), y = ~LapTime, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
+av <- plot_ly(mn.reactive(), y = ~LapTime, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
 av <- av %>% layout(title = 'Lap Times')
 av
 })
 ```
 
+### Overall Pace
+
+```{r pace_ovr, echo=FALSE}
+renderPlotly({
+hyg <- plot_ly(mn.reactive(), y = ~LapTime, x =~Driver, color=~Tyre, type = "box")
+hyg <- hyg %>% layout(title = 'Overall Pace', boxmode = "group")
+hyg
+})
+```
 
 ### Table
 ```{r tires_tbl, echo=FALSE}
 DT::renderDataTable({
-  datatable(con.reactive(),
+  datatable(mn.reactive(),
              extensions = 'Buttons',
             options = list(bPaginate=FALSE, scrollY="1000px", 
                            dom = 'Blfrtip',
@@ -128,4 +472,3 @@ DT::renderDataTable({
   
 })
 ```
-
