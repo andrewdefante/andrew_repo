@@ -34,12 +34,17 @@ gp <- read.csv('2021_gp.csv')
 #convert time columns to apt class 
 #gp$LapTime <- as.POSIXct(gp$LapTime, format="%H:%M:%OS",tz="UTC"); difftime(gp$LapTime,trunc(gp$LapTime,"day"),units="secs")
 gp$LapTime <- as.numeric(strptime(gp$LapTime, format="%H:%M:%OS") - as.POSIXct(format(Sys.Date())), units="secs")
+gp$Sector1Time <- as.numeric(strptime(gp$Sector1Time, format="%H:%M:%OS") - as.POSIXct(format(Sys.Date())), units="secs")
+gp$Sector2Time <- as.numeric(strptime(gp$Sector2Time, format="%H:%M:%OS") - as.POSIXct(format(Sys.Date())), units="secs")
+gp$Sector3Time <- as.numeric(strptime(gp$Sector3Time, format="%H:%M:%OS") - as.POSIXct(format(Sys.Date())), units="secs")
 #gp$LapTime <- as.numeric(hmos(gp$LapTime) - hmos("00:00:00.000"))
-gp$Sector1Time <- as.POSIXct(gp$Sector1Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector1Time,trunc(gp$Sector1Time,"day"),units="secs")
-gp$Sector1Time <- as.numeric(gp$Sector2Time)
-gp$Sector2Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector2Time,trunc(gp$Sector2Time,"day"),units="secs")
-gp$Sector3Time <- as.numeric(gp$Sector3Time)
-gp$Sector3Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector3Time,trunc(gp$Sector3Time,"day"),units="secs")
+#gp$Sector1Time <- as.POSIXct(gp$Sector1Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector1Time,trunc(gp$Sector1Time,"day"),units="secs")
+#gp$Sector1Time <- as.numeric(gp$Sector2Time)
+#gp$Sector2Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector2Time,trunc(gp$Sector2Time,"day"),units="secs")
+#gp$Sector3Time <- as.numeric(gp$Sector3Time)
+#gp$Sector3Time <- as.POSIXct(gp$Sector2Time, format="%H:%M:%OS",tz="UTC"); difftime(gp$Sector3Time,trunc(gp$Sector3Time,"day"),units="secs")
+
+write.csv(gp, "gp_2021_lap_sector_times.csv")
 
 ```
 
