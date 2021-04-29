@@ -5,6 +5,6 @@ account: andrewdefante
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3997532
-bundleId: 4497534
+bundleId: 4532701
 url: https://andrewdefante.shinyapps.io/pred/
-when: 1618957457.66184
+when: 1619656580.42115

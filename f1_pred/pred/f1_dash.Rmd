@@ -28,6 +28,7 @@ library(shinyjs)
 library(rsconnect)
 library(DT)
 library(data.table)
+library(rsconnect)
 
 gp <- read.csv('gp_2021_lap_sector_times_deltas.csv')
 
@@ -190,6 +191,18 @@ mn2.reactive <- reactive({
     filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
   }) 
 
+mn3.reactive <- reactive({
+  gp %>%
+    filter(!is.na(LapTime)) %>%
+    filter(gp %in% input$gp2) %>%
+    filter(Team %in% input$team2) %>%
+    filter(Driver %in% input$driver2) %>%
+    filter(session %in% input$session2) %>%
+    filter(Stint %in% input$stint) %>%
+    filter(Tyre %in% input$compound2) %>%
+    filter(LapNumber >= input$tl[1] & LapNumber <= input$tl[2])
+  }) 
+
 # Session FL 
 ssfl.reactive <- reactive({
   gp %>%
@@ -237,7 +250,7 @@ tl.reactive <- reactive({
 Metrics 
 ---------------------------------------------------
 
-### Fastest Lap - Session {.value-box}
+### Avg Lap - Session {.value-box}
   
 ```{r notes.fastest_lap_session, echo=FALSE}
 # Total number of patients
@@ -245,14 +258,14 @@ Metrics
 renderValueBox({
   #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
   valueBox(
-    value = min(ssfl.reactive()$LapTime, na.rm = TRUE),
+    value = min(mn2.reactive()$LapTime, na.rm = TRUE),
     caption = "Fastest Lap - Session")
 })
 
 
 ```
 
-### Fastest Lap - Session {.value-box}
+### Avg Tyre Life - Session {.value-box}
   
 ```{r fastest_lap_c, echo=FALSE}
 # Total number of patients
@@ -260,14 +273,14 @@ renderValueBox({
 renderValueBox({
   #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
   valueBox(
-    value = min(ssflc.reactive()$LapTime, na.rm = TRUE),
-    caption = "Fastest Lap - Tyre")
+    value = mean(mn2.reactive()$TyreLife, na.rm = TRUE),
+    caption = "Avg Tyre Life - Session")
 })
 
 
 ```
 
-### Fastest Lap - Driver {.value-box}
+### Net Delta Over Laps - Driver {.value-box}
   
 ```{r fl_d, echo=FALSE}
 # Total number of patients
@@ -275,8 +288,9 @@ renderValueBox({
 renderValueBox({
   #req(input$surv.date, input$actv.department, input$visit_type, input$specialty, input$input_prov_name)
   valueBox(
-    value = min(tl.reactive()$LapTime, na.rm = TRUE),
-    caption = "Fastest Lap - Driver")
+    value = sum(tl.reactive()$LL_delta, na.rm = TRUE),
+    #value = ((sum(tl.reactive()$LL_delta, na.rm = TRUE))/(length(mn2.reactive()$LapNumber))),
+    caption = "Net Delta Over Laps - Driver")
 })
 
 
@@ -315,169 +329,20 @@ av2
 ```
 
 
+### Out Lap Delta
+```{r laptime4, echo=FALSE}
+renderPlotly({
+av3 <- plot_ly(mn2.reactive(), y = ~OL_delta, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
+av3 <- av3 %>% layout(title = 'Out Lap Delta Over Laps')
+av3
+})
+```
+
+
 ### Stint Table
 ```{r tires_tbl2, echo=FALSE}
 DT::renderDataTable({
   datatable(mn2.reactive(),
-             extensions = 'Buttons',
-            options = list(bPaginate=FALSE, scrollY="1000px", 
-                           dom = 'Blfrtip',
-                           buttons = c('excel', 'pdf'),
-                           lengthMenu = list(c(10,25,50,-1),
-                                             c(10,25,50,"All"))))
-  
-})
-```
-
-
-
-Data by Session
-==================================================
-
-Sidebar {.sidebar data-width=350}
----------------------------------------------------
-
-```{r sidebar.main, echo = FALSE}
-
-# pick GP
-pickerInput(inputId = "gp",
-                      label = "Grand Prix",
-                      choices = levels(as.factor(gp$gp)),
-                      selected = levels(as.factor(gp$gp)),
-                      multiple = FALSE,
-                      options = pickerOptions(actionsBox = TRUE))
-
-# pick constructor
-pickerInput(inputId = "team",
-                      label = "Constructor",
-                      choices = levels(as.factor(gp$Team)),
-                      selected = levels(as.factor(gp$Team)),
-                      multiple = TRUE,
-                      options = pickerOptions(actionsBox = TRUE))
-
-# Constructor Reactive Dataframe
-con.reactive <- reactive({
-  gp %>%
-    filter(gp %in% input$gp) %>%
-    filter(Team %in% input$team)
-})
-
-# pick driver
-renderUI ({pickerInput(inputId = "driver",
-                      label = "Driver",
-                      choices = levels(as.factor(con.reactive()$Driver)),
-                      selected = levels(as.factor(con.reactive()$Driver)),
-                      multiple = TRUE,
-                      options = pickerOptions(actionsBox = TRUE)) })
-
-# Constructor Reactive Dataframe
-d.reactive <- reactive({
-  gp %>%
-    filter(gp %in% input$gp) %>%
-    filter(Team %in% input$team) %>%
-    filter(Driver %in% input$driver)
-})
-
-# pick session
-renderUI ({pickerInput(inputId = "session",
-                      label = "Session",
-                      choices = levels(as.factor(d.reactive()$session)),
-                      selected = levels(as.factor(d.reactive()$session)),
-                      multiple = FALSE,
-                      options = pickerOptions(actionsBox = TRUE)) })
-
-# Constructor Reactive Dataframe
-s.reactive <- reactive({
-  gp %>%
-    filter(gp %in% input$gp) %>%
-    filter(Team %in% input$team) %>%
-    filter(Driver %in% input$driver) %>%
-    filter(session %in% input$session)
-})
-
-# pick tyre
-renderUI ({pickerInput(inputId = "Tyre",
-                      label = "Tyre Tyre",
-                      choices = levels(as.factor(s.reactive()$Tyre)),
-                      selected = levels(as.factor(s.reactive()$Tyre)),
-                      multiple = TRUE,
-                      options = pickerOptions(actionsBox = TRUE)) })
-
-# Constructor Reactive Dataframe
-t.reactive <- reactive({
-  gp %>%
-    filter(gp %in% input$gp) %>%
-    filter(Team %in% input$team) %>%
-    filter(Driver %in% input$driver) %>%
-    filter(session %in% input$session) %>%
-    filter(Tyre %in% input$Tyre)
-})
-
-# Use the renderUI function to display reactive results based on above selections
-renderUI ({sliderInput(inputId = "lap",
-            label = h4("Lap"),
-            min = min(t.reactive()$LapNumber),
-            max = max(t.reactive()$LapNumber),
-           value = c(min(t.reactive()$LapNumber), 
-                      max(t.reactive()$LapNumber)))
-           #,step = 1)
-})
-# Constructor Reactive Dataframe
-mn.reactive <- reactive({
-  gp %>%
-    filter(gp %in% input$gp) %>%
-    filter(Team %in% input$team) %>%
-    filter(Driver %in% input$driver) %>%
-    filter(session %in% input$session) %>%
-    filter(Tyre %in% input$Tyre) %>%
-    filter(LapNumber >= input$lap[1] & LapNumber <= input$lap[2])
-  }) 
-
-##tires.test <- 
-##  laptimes_2020 %>%
-##    group_by(constructor) %>%
-##    filter(code %in% 'ALB') %>%
-##    filter(constructor %in% 'RB') %>%
-##    filter(traction %in% '3') %>%
-##    filter(braking %in% '4') %>% 
-##    mutate(  
-##      fastest_lap = min(ms),
-##      avg_lap = mean(ms),
-##      fl_delta = ((ms - fastest_lap)*0.001),
-##      avg_delta = (avg_lap - ms)
-##     ) %>%
-##     as.data.frame()
-
-```
-
-
-Row {.tabset}
------------------------------------------------------------------------
-
-### Lap Chart (by Session Lap)
-
-```{r laptime1, echo=FALSE}
-renderPlotly({
-av <- plot_ly(mn.reactive(), y = ~LapTime, x =~LapNumber, color =~Driver, type = 'scatter', mode = 'lines')
-av <- av %>% layout(title = 'Lap Times')
-av
-})
-```
-
-### Overall Pace
-
-```{r pace_ovr, echo=FALSE}
-renderPlotly({
-hyg <- plot_ly(mn.reactive(), y = ~LapTime, x =~Driver, color=~Tyre, type = "box")
-hyg <- hyg %>% layout(title = 'Overall Pace', boxmode = "group")
-hyg
-})
-```
-
-### Table
-```{r tires_tbl, echo=FALSE}
-DT::renderDataTable({
-  datatable(mn.reactive(),
              extensions = 'Buttons',
             options = list(bPaginate=FALSE, scrollY="1000px", 
                            dom = 'Blfrtip',
