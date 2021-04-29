@@ -17,7 +17,7 @@ from gp_2021_lap_sector_times
 		,session
 		,stint
 	from gp_2021_lap_sector_times
-	where PitOutTime is null 
+	where PitOutTime is null and track_clear = 'yes'
 	group by 
 		DriverNumber
 		,gp
