@@ -22,7 +22,7 @@ from gp_2021_lap_sector_times mn
 		and mn.gp = ll.gp
 		and mn.session = ll.session 
 		and mn.LapNumber = ll.LapNumber
-	inner join out_lap ol
+	left join out_lap_specific ol
 		on mn.DriverNumber = ol.DriverNumber
 		and mn.gp = ol.gp
 		and mn.session = ol.session 

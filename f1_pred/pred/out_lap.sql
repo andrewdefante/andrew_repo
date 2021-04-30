@@ -17,7 +17,7 @@ from gp_2021_lap_sector_times
 		,session
 		,stint
 	from gp_2021_lap_sector_times
-	where PitOutTime is null and track_clear = 'yes'
+	where PitOutTime is null and PitInTime is null and track_clear = 'yes'
 	group by 
 		DriverNumber
 		,gp
@@ -74,4 +74,5 @@ select
 	,ll_lapTime
 	,(laptime - ll_laptime) as lld
 from llt
+where out_lap < lapnumber
 		
